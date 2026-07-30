@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import '../services/admin_session.dart';
 import 'admin_login.dart';
 
-/// Placeholder landing screen behind [AdminRouteGuard], standing in until
-/// the full dashboard layout (moderation panel, reports, analytics) is
-/// built out. Exists so role-based access control has a real screen to
-/// protect and can be demonstrated end-to-end.
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
+
+  static const Color _green = Color(0xFF2E7D32);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: _green,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -23,27 +21,141 @@ class AdminDashboardScreen extends StatelessWidget {
             icon: const Icon(Icons.logout),
             onPressed: () {
               AdminSession.logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                (route) => false,
-              );
+
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
         ],
       ),
-      body: const Center(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Platform Summary',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Overview of NeighbourShare activity.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: const [
+                _SummaryCard(
+                  title: 'Total Donors',
+                  value: '1',
+                  icon: Icons.volunteer_activism,
+                ),
+                _SummaryCard(
+                  title: 'Total Recipients',
+                  value: '1',
+                  icon: Icons.people,
+                ),
+                _SummaryCard(
+                  title: 'Food Listings',
+                  value: '2',
+                  icon: Icons.inventory_2,
+                ),
+                _SummaryCard(
+                  title: 'Food Requests',
+                  value: '2',
+                  icon: Icons.request_page,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 32),
+
+            const Text(
+              'Request Status',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.hourglass_top),
+                title: Text('Pending Requests'),
+                trailing: Text(
+                  '1',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.check_circle_outline),
+                title: Text('Accepted Requests'),
+                trailing: Text(
+                  '1',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+
+  const _SummaryCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 240,
+      child: Card(
+        elevation: 3,
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          padding: const EdgeInsets.all(20),
+          child: Row(
             children: [
-              Icon(Icons.verified_user, size: 64, color: Color(0xFF2E7D32)),
-              SizedBox(height: 16),
-              Text(
-                'Access granted — you are logged in as Administrator.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              Icon(
+                icon,
+                size: 38,
+                color: AdminDashboardScreen._green,
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(title),
+                ],
               ),
             ],
           ),

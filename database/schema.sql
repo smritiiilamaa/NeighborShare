@@ -7,6 +7,8 @@ CREATE TABLE user_accounts (
     password_hash TEXT NOT NULL,
     role VARCHAR(20) NOT NULL
         CHECK (role IN ('Donor', 'Recipient', 'Administrator')),
+    account_status VARCHAR(20) NOT NULL DEFAULT 'Active'
+        CHECK (account_status IN ('Active', 'Banned')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -158,7 +160,17 @@ CREATE TABLE messages (
         ON DELETE CASCADE
 );
 
--- Add account_status column to user_accounts table
-ALTER TABLE user_accounts
-ADD COLUMN account_status VARCHAR(20) NOT NULL DEFAULT 'Active';
+--Incident_reports--
+CREATE TABLE incident_reports (
+    incident_id SERIAL PRIMARY KEY,
+    admin_id INTEGER NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_incident_admin
+        FOREIGN KEY (admin_id)
+        REFERENCES user_accounts(account_id)
+);
 

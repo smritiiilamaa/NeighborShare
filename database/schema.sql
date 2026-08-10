@@ -138,3 +138,23 @@ CREATE TABLE food_requests (
     CONSTRAINT unique_recipient_listing_request
         UNIQUE (listing_id, recipient_id)
 );
+
+--Messages--
+CREATE TABLE messages (
+    message_id SERIAL PRIMARY KEY,
+    donor_id INTEGER NOT NULL,
+    recipient_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_messages_donor
+        FOREIGN KEY (donor_id)
+        REFERENCES donor_profiles(donor_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_messages_recipient
+        FOREIGN KEY (recipient_id)
+        REFERENCES recipient_profiles(recipient_id)
+        ON DELETE CASCADE
+);
+

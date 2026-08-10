@@ -158,3 +158,7 @@ CREATE TABLE messages (
         ON DELETE CASCADE
 );
 
+-- Add account_status column to user_accounts table
+ALTER TABLE user_accounts
+ADD COLUMN account_status VARCHAR(20) NOT NULL DEFAULT 'Active';
+

@@ -1,5 +1,243 @@
 import 'package:flutter/material.dart';
 
+import 'request_food.dart';
+
+class FoodListingDetailsPage extends StatelessWidget {
+  final Map<String, String> listing;
+
+  const FoodListingDetailsPage({
+    super.key,
+    required this.listing,
+  });
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return Colors.green;
+      case 'reserved':
+        return Colors.orange;
+      case 'collected':
+        return Colors.blue;
+      case 'expired':
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _statusBackground(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return Colors.green.shade100;
+      case 'reserved':
+        return Colors.orange.shade100;
+      case 'collected':
+        return Colors.blue.shade100;
+      case 'expired':
+      case 'cancelled':
+        return Colors.red.shade100;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final foodName = listing['name'] ?? 'Unnamed food';
+    final category = listing['category'] ?? 'Other';
+    final quantity = listing['quantity'] ?? 'Not specified';
+    final location = listing['location'] ?? 'Not specified';
+    final description = listing['description'] ?? 'No additional description provided.';
+    final status = listing['status'] ?? 'Available';
+    final donorName = listing['donor_name'] ?? listing['donorId'] ?? 'Community donor';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Listing Details'),
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.fastfood_outlined,
+                    size: 60,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Food Listing',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    foodName,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            const Text(
+              'Listing Information',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            _informationCard(
+              icon: Icons.category_outlined,
+              title: 'Category',
+              value: category,
+            ),
+
+            _informationCard(
+              icon: Icons.inventory_2_outlined,
+              title: 'Quantity',
+              value: quantity,
+            ),
+
+            _informationCard(
+              icon: Icons.location_on_outlined,
+              title: 'Pickup Location',
+              value: location,
+            ),
+
+            _informationCard(
+              icon: Icons.person_outline,
+              title: 'Donor',
+              value: donorName,
+            ),
+
+            _informationCard(
+              icon: Icons.info_outline,
+              title: 'Status',
+              value: status,
+              valueColor: _statusColor(status),
+              backgroundColor: _statusBackground(status),
+            ),
+
+            _informationCard(
+              icon: Icons.description_outlined,
+              title: 'Description',
+              value: description,
+            ),
+
+            const SizedBox(height: 25),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RequestFoodScreen(
+                        foodItem: listing,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.request_page),
+                label: const Text(
+                  'Request Food',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _informationCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    Color? valueColor,
+    Color? backgroundColor,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.green.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: valueColor ?? Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ListingDetailsPage extends StatelessWidget {
   final Map<String, String> listing;
 
@@ -52,7 +290,6 @@ class ListingDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(22),
@@ -133,7 +370,6 @@ class ListingDetailsPage extends StatelessWidget {
 
             const SizedBox(height: 15),
 
-            // Mark Under Review
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -168,7 +404,6 @@ class ListingDetailsPage extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Remove listing
             SizedBox(
               width: double.infinity,
               height: 52,

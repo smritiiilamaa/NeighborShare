@@ -197,6 +197,30 @@ const getListingsByDonor = async (req, res) => {
     }
 };
 
+const getAvailableListings = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT
+                food_listings.*,
+                donor_profiles.full_name AS donor_name
+             FROM food_listings
+             JOIN donor_profiles
+                ON food_listings.donor_id = donor_profiles.donor_id
+             WHERE food_listings.status = $1
+             ORDER BY food_listings.created_at DESC`,
+            ["Available"]
+        );
+
+        return res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("Get available listings error:", error);
+
+        return res.status(500).json({
+            message: "Error retrieving available food listings."
+        });
+    }
+};
+
 const updateListing = async (req, res) => {
     try {
         const { id } = req.params;
@@ -309,5 +333,6 @@ module.exports = {
     getListingById,
     getListingsByDonor,
     updateListing,
+    getAvailableListings,
     deleteListing
 };

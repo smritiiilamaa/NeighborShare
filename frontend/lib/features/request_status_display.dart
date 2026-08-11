@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Smriti - Iteration 2 / R6 (S5)
 class RequestStatusDisplay extends StatelessWidget {
   final String foodName;
   final String status;

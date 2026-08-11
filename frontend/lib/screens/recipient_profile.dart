@@ -1,4 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../services/api_config.dart';
+import '../features/profile_validation.dart';
+import 'recipient_dashboard.dart';
 
 class CreateRecipientProfileScreen extends StatefulWidget {
   const CreateRecipientProfileScreen({super.key});
@@ -57,14 +64,7 @@ class _CreateRecipientProfileScreenState
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Email address is required';
-    }
-    final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$');
-    if (!emailRegex.hasMatch(value.trim())) {
-      return 'Enter a valid email address';
-    }
-    return null;
+    return ProfileValidation.email(value);
   }
 
   String? _validatePhone(String? value) {
@@ -79,17 +79,7 @@ class _CreateRecipientProfileScreenState
   }
 
   String? _validatePostalCode(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Postal code is required';
-    }
-    final postalRegex = RegExp(
-      r'^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z] ?\d[ABCEGHJ-NPRSTV-Z]\d$',
-      caseSensitive: false,
-    );
-    if (!postalRegex.hasMatch(value.trim())) {
-      return 'Enter a valid Canadian postal code (e.g. M5V 2T6)';
-    }
-    return null;
+    return ProfileValidation.postalCode(value);
   }
 
   Future<void> _handleSubmit() async {
@@ -101,13 +91,60 @@ class _CreateRecipientProfileScreenState
 
     setState(() => _isSubmitting = true);
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/recipients'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'full_name': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone_number': _phoneController.text.trim(),
+          'street_address': _streetAddressController.text.trim(),
+          'city': _cityController.text.trim(),
+          'postal_code': _postalCodeController.text.trim(),
+          'dietary_preference': _selectedDietaryPreference,
+          'allergies': _allergiesController.text.trim().isEmpty
+              ? null
+              : _allergiesController.text.trim(),
+        }),
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() => _isSubmitting = false);
+      setState(() => _isSubmitting = false);
 
-    _showSuccessDialog();
+      if (response.statusCode == 201) {
+        _showSuccessDialog();
+      } else {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        _showErrorSnackBar(
+          body['message'] as String? ?? 'Failed to create recipient profile.',
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() => _isSubmitting = false);
+
+      _showErrorSnackBar(
+        'Could not reach the server. Make sure the backend is running.',
+      );
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   void _showSuccessDialog() {
@@ -169,10 +206,15 @@ class _CreateRecipientProfileScreenState
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop();
                       _resetForm();
+
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const RecipientDashboardScreen(),
+                        ),
+                      );
                     },
-                    child: const Text('Done'),
+                    child: const Text('Go to Dashboard'),
                   ),
                 ),
               ],

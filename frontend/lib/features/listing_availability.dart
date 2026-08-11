@@ -1,4 +1,3 @@
-/// Smriti - Iteration 2 / D8 (S4)
 /// Prevents a recipient from requesting/claiming a listing that has already
 /// been accepted/reserved or is otherwise unavailable.
 class ListingAvailability {

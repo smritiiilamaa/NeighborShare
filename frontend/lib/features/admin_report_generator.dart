@@ -1,9 +1,8 @@
-/// Smriti - Iteration 2 / A1 (M11)
 /// Generates a report from raw usage data supplied by the existing data layer.
 ///
 /// This intentionally does NOT fetch from the database/API. In the TAC, data
 /// retrieval and report display are owned by other developers. This class only
-/// handles Smriti's assigned report-generation logic so responsibilities do not
+/// handles assigned report-generation logic so responsibilities do not
 /// overlap and merge conflicts are minimized.
 class AdminUsageReport {
   final DateTime generatedAt;

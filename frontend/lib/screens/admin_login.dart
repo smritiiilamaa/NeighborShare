@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../services/admin_session.dart';
+import 'admin_dashboard.dart';
+
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
 
@@ -42,37 +45,84 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     return null;
   }
 
-  Future<void> _handleLogin() async {
-    FocusScope.of(context).unfocus();
-    setState(() => _errorMessage = null);
+Future<void> _handleLogin() async {
+  FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  setState(() {
+    _errorMessage = null;
+  });
 
-    setState(() => _isSubmitting = true);
-
-    // TODO: replace with real call once backend/src/routes/admin.js is wired up
-    await Future.delayed(const Duration(seconds: 1));
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    // Placeholder check — swap for real API call to POST /api/admin/login
-    if (email == 'admin@neighbourshare.com' && password == 'admin123') {
-      if (!mounted) return;
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful')),
-      );
-    } else {
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
-        _errorMessage = 'Invalid email or password';
-      });
-    }
+  if (!_formKey.currentState!.validate()) {
+    return;
   }
+
+  setState(() {
+    _isSubmitting = true;
+  });
+
+  await Future.delayed(const Duration(seconds: 1));
+
+  final email = _emailController.text.trim().toLowerCase();
+  final password = _passwordController.text;
+
+  if (!mounted) return;
+
+  if (email == 'admin@neighbourshare.com' && password == 'admin123') {
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    AdminSession.login();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+    );
+  } else if (email == 'user@neighbourshare.com' &&
+      password == 'user123') {
+    setState(() {
+      _isSubmitting = false;
+      _errorMessage =
+          'Access denied. This account does not have administrator permission.';
+    });
+
+    _showAccessDeniedDialog();
+  } else {
+    setState(() {
+      _isSubmitting = false;
+      _errorMessage = 'Invalid email or password.';
+    });
+  }
+}
+
+void _showAccessDeniedDialog() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        icon: const Icon(
+          Icons.block,
+          color: Colors.redAccent,
+          size: 48,
+        ),
+        title: const Text('Access Denied'),
+        content: const Text(
+          'Only authorized administrators can access the administration panel.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

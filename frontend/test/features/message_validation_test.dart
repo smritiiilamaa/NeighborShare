@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/smriti_iteration2/message_validation.dart';
+import 'package:frontend/features/message_validation.dart';
 
 void main() {
-  group('Smriti Iteration 2 - message validation', () {
+  group('message validation', () {
     test('blank message is rejected', () {
       expect(MessageValidation.validate('  '), 'Enter a message');
     });

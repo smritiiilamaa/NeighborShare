@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../features/profile_validation.dart';
 
 class CreateDonorProfileScreen extends StatefulWidget {
   const CreateDonorProfileScreen({super.key});
@@ -42,14 +43,7 @@ class _CreateDonorProfileScreenState extends State<CreateDonorProfileScreen> {
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Email address is required';
-    }
-    final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$');
-    if (!emailRegex.hasMatch(value.trim())) {
-      return 'Enter a valid email address';
-    }
-    return null;
+    return ProfileValidation.email(value);
   }
 
   String? _validatePhone(String? value) {
@@ -64,17 +58,7 @@ class _CreateDonorProfileScreenState extends State<CreateDonorProfileScreen> {
   }
 
   String? _validatePostalCode(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Postal code is required';
-    }
-    final postalRegex = RegExp(
-      r'^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z] ?\d[ABCEGHJ-NPRSTV-Z]\d$',
-      caseSensitive: false,
-    );
-    if (!postalRegex.hasMatch(value.trim())) {
-      return 'Enter a valid Canadian postal code (e.g. M5V 2T6)';
-    }
-    return null;
+    return ProfileValidation.postalCode(value);
   }
 
   Future<void> _handleSubmit() async {

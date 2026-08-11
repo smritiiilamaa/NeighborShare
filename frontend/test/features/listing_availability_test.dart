@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/smriti_iteration2/listing_availability.dart';
+import 'package:frontend/features/listing_availability.dart';
 
 void main() {
-  group('Smriti Iteration 2 - listing availability', () {
+  group('listing availability', () {
     test('available listing can be requested', () {
       expect(ListingAvailability.isAvailable('Available'), isTrue);
     });

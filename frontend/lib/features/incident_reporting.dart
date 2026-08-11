@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Smriti - Iteration 2 / A2 (S9)
 /// Coordinates the incident-report flow without duplicating the teammate-owned
 /// backend processing, database-save, or validation tasks.
 class IncidentReportData {

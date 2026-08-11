@@ -1,4 +1,4 @@
-/// Shared profile validators used by Smriti's profile-update validation tests.
+/// Shared profile validators used by profile-update validation tests.
 class ProfileValidation {
   const ProfileValidation._();
 

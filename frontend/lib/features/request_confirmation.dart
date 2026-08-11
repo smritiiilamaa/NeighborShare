@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Smriti - Iteration 2 / R5 (M6)
 /// Request confirmation UI shown after a recipient submits a food request.
 class RequestConfirmationDialog extends StatelessWidget {
   final String foodName;

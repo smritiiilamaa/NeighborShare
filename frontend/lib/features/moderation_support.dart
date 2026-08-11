@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Smriti - Iteration 2 / A4 (M12), A5 (M13), A6 (M14)
 /// Conflict-safe moderation helpers. Backend deletion and account updates remain
 /// outside this file because those tasks are assigned to other developers.
 class ModerationSupport {
@@ -51,16 +50,14 @@ class ModerationSupport {
         false;
   }
 
-  /// Smriti's "refresh listing results after removal" task.
-  /// Call this AFTER the teammate-owned delete API succeeds.
+    /// Call this AFTER the teammate-owned delete API succeeds.
   static Future<List<T>> refreshAfterRemoval<T>({
     required Future<List<T>> Function() reloadListings,
   }) async {
     return reloadListings();
   }
 
-  /// Smriti's "display confirmation message and refresh user list" task.
-  /// The actual database ban operation remains teammate-owned.
+    /// The actual database ban operation remains teammate-owned.
   static Future<List<T>?> confirmBanAndRefresh<T>(
     BuildContext context, {
     required String userName,

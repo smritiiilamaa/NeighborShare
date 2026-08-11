@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/smriti_iteration2/admin_report_generator.dart';
+import 'package:frontend/features/admin_report_generator.dart';
 
 void main() {
   test('generates correct usage and traffic totals', () {

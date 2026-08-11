@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Smriti - Iteration 2 / D6 (S2)
 class ConversationMessage {
   final String senderName;
   final String text;

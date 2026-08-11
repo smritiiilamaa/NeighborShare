@@ -1,4 +1,3 @@
-/// Smriti - Iteration 2 / R8 (S7)
 class MessageValidation {
   const MessageValidation._();
 

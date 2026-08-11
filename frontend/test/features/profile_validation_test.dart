@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/smriti_iteration2/profile_validation.dart';
+import 'package:frontend/features/profile_validation.dart';
 
 void main() {
-  group('Smriti Iteration 2 - profile validation', () {
+  group('profile validation', () {
     test('valid email passes', () {
-      expect(ProfileValidation.email('smriti@example.com'), isNull);
+      expect(ProfileValidation.email('user@example.com'), isNull);
     });
 
     test('invalid email is rejected', () {
       expect(
-        ProfileValidation.email('smriti.example.com'),
+        ProfileValidation.email('user.example.com'),
         'Enter a valid email address',
       );
     });

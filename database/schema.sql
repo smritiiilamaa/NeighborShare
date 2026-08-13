@@ -1,18 +1,43 @@
---Donor_profiles--
+-- ============================================================
+-- NeighborShare Database Schema
+-- ============================================================
 
--- User accounts
+
+-- ============================================================
+-- USER ACCOUNTS
+-- ============================================================
+
 CREATE TABLE user_accounts (
     account_id SERIAL PRIMARY KEY,
+
     email VARCHAR(150) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+
     role VARCHAR(20) NOT NULL
-        CHECK (role IN ('Donor', 'Recipient', 'Administrator')),
+        CHECK (
+            role IN (
+                'Donor',
+                'Recipient',
+                'Administrator'
+            )
+        ),
+
     account_status VARCHAR(20) NOT NULL DEFAULT 'Active'
-        CHECK (account_status IN ('Active', 'Banned')),
+        CHECK (
+            account_status IN (
+                'Active',
+                'Banned'
+            )
+        ),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Donor profiles
+
+-- ============================================================
+-- DONOR PROFILES
+-- ============================================================
+
 CREATE TABLE donor_profiles (
     donor_id SERIAL PRIMARY KEY,
 
@@ -24,6 +49,7 @@ CREATE TABLE donor_profiles (
     street_address VARCHAR(255) NOT NULL,
     city VARCHAR(100) NOT NULL,
     postal_code VARCHAR(20) NOT NULL,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_donor_account
@@ -32,9 +58,16 @@ CREATE TABLE donor_profiles (
         ON DELETE CASCADE
 );
 
---Recipient_profiles--
+
+-- ============================================================
+-- RECIPIENT PROFILES
+-- ============================================================
+
 CREATE TABLE recipient_profiles (
     recipient_id SERIAL PRIMARY KEY,
+
+    account_id INTEGER UNIQUE NOT NULL,
+
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
@@ -57,10 +90,20 @@ CREATE TABLE recipient_profiles (
         ),
 
     allergies TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_recipient_account
+        FOREIGN KEY (account_id)
+        REFERENCES user_accounts(account_id)
+        ON DELETE CASCADE
 );
 
---Food_listings--
+
+-- ============================================================
+-- FOOD LISTINGS
+-- ============================================================
+
 CREATE TABLE food_listings (
     listing_id SERIAL PRIMARY KEY,
 
@@ -96,6 +139,24 @@ CREATE TABLE food_listings (
             )
         ),
 
+    expiry_date DATE,
+
+    -- Listing moderation / flagging
+    is_flagged BOOLEAN NOT NULL DEFAULT FALSE,
+    flag_reason TEXT,
+    flagged_by VARCHAR(150),
+    flagged_at TIMESTAMP,
+
+    moderation_status VARCHAR(20) NOT NULL DEFAULT 'Pending'
+        CONSTRAINT food_listings_moderation_status_check
+        CHECK (
+            moderation_status IN (
+                'Pending',
+                'Under Review',
+                'Resolved'
+            )
+        ),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_listing_donor
@@ -104,7 +165,11 @@ CREATE TABLE food_listings (
         ON DELETE CASCADE
 );
 
---Food_requests--
+
+-- ============================================================
+-- FOOD REQUESTS
+-- ============================================================
+
 CREATE TABLE food_requests (
     request_id SERIAL PRIMARY KEY,
 
@@ -141,13 +206,22 @@ CREATE TABLE food_requests (
         UNIQUE (listing_id, recipient_id)
 );
 
---Messages--
+
+-- ============================================================
+-- MESSAGES
+-- ============================================================
+
 CREATE TABLE messages (
     message_id SERIAL PRIMARY KEY,
+
     donor_id INTEGER NOT NULL,
     recipient_id INTEGER NOT NULL,
+
     message TEXT NOT NULL,
+
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT fk_messages_donor
         FOREIGN KEY (donor_id)
@@ -160,17 +234,37 @@ CREATE TABLE messages (
         ON DELETE CASCADE
 );
 
---Incident_reports--
+
+-- ============================================================
+-- INCIDENT REPORTS
+-- ============================================================
+
 CREATE TABLE incident_reports (
     incident_id SERIAL PRIMARY KEY,
-    admin_id INTEGER NOT NULL,
-    title VARCHAR(150) NOT NULL,
+
+    -- Nullable because the newer incident-report implementation
+    -- can use reported_by instead.
+    admin_id INTEGER,
+
+    title VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'Open',
+
+    reported_by VARCHAR(150),
+
+    status VARCHAR(20) NOT NULL DEFAULT 'Open'
+        CONSTRAINT incident_reports_status_check
+        CHECK (
+            status IN (
+                'Open',
+                'Investigating',
+                'Resolved'
+            )
+        ),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_incident_admin
         FOREIGN KEY (admin_id)
         REFERENCES user_accounts(account_id)
 );
-

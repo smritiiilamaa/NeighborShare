@@ -1,4 +1,7 @@
 const pool = require("../config/db");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+
 
 const allowedDietaryPreferences = [
     "None",
@@ -12,6 +15,9 @@ const allowedDietaryPreferences = [
 ];
 
 const createRecipient = async (req, res) => {
+    let client;
+    let transactionStarted = false;
+
     try {
         const {
             full_name,
@@ -44,9 +50,59 @@ const createRecipient = async (req, res) => {
             });
         }
 
-        const result = await pool.query(
+        const normalizedEmail = email.trim().toLowerCase();
+
+        client = await pool.connect();
+
+        await client.query("BEGIN");
+        transactionStarted = true;
+
+        // Make sure this email does not already have an account.
+        const existingAccount = await client.query(
+            `SELECT account_id
+             FROM user_accounts
+             WHERE email = $1`,
+            [normalizedEmail]
+        );
+
+        if (existingAccount.rows.length > 0) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return res.status(409).json({
+                message: "An account with this email already exists."
+            });
+        }
+
+        /*
+         * Password/login setup is handled the same way as donor creation:
+         * create a temporary random value because password_hash is required.
+         */
+        const temporaryPassword = crypto.randomBytes(32).toString("hex");
+        const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+        const accountResult = await client.query(
+            `INSERT INTO user_accounts
+            (
+                email,
+                password_hash,
+                role
+            )
+            VALUES ($1, $2, $3)
+            RETURNING account_id, email, role, account_status`,
+            [
+                normalizedEmail,
+                passwordHash,
+                "Recipient"
+            ]
+        );
+
+        const account = accountResult.rows[0];
+
+        const recipientResult = await client.query(
             `INSERT INTO recipient_profiles
             (
+                account_id,
                 full_name,
                 email,
                 phone_number,
@@ -56,11 +112,12 @@ const createRecipient = async (req, res) => {
                 dietary_preference,
                 allergies
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *`,
             [
+                account.account_id,
                 full_name.trim(),
-                email.trim().toLowerCase(),
+                normalizedEmail,
                 phone_number.trim(),
                 street_address.trim(),
                 city.trim(),
@@ -70,19 +127,35 @@ const createRecipient = async (req, res) => {
             ]
         );
 
-        return res.status(201).json(result.rows[0]);
+        await client.query("COMMIT");
+        transactionStarted = false;
+
+        return res.status(201).json({
+            message: "Recipient account and profile created successfully.",
+            account,
+            recipient: recipientResult.rows[0]
+        });
     } catch (error) {
-        console.error(error);
+        if (client && transactionStarted) {
+            await client.query("ROLLBACK");
+        }
+
+        console.error("Create recipient error:", error);
 
         if (error.code === "23505") {
             return res.status(409).json({
-                message: "A recipient profile with this email already exists."
+                message:
+                    "An account or recipient profile with this email already exists."
             });
         }
 
         return res.status(500).json({
-            message: "Error creating recipient profile."
+            message: "Error creating recipient account and profile."
         });
+    } finally {
+        if (client) {
+            client.release();
+        }
     }
 };
 

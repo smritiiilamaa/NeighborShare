@@ -7,6 +7,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const recipientRoutes = require("./routes/recipientRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const foodRequestRoutes = require("./routes/foodRequestRoutes");
+const messageRoutes = require("./routes/messageRoutes");
+const incidentRoutes = require("./routes/incidentRoutes");
 const app = express();
 
 app.use(cors());
@@ -18,5 +20,7 @@ app.use("/api/listings", listingRoutes);
 app.use("/api/requests", foodRequestRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/incidents", incidentRoutes);
 
 module.exports = app;

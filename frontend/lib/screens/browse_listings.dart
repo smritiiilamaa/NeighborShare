@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
+import 'listing_details.dart';
+import 'message_compose.dart';
 import 'request_food.dart';
 
 class BrowseListingsScreen extends StatefulWidget {
@@ -46,15 +48,13 @@ class _BrowseListingsScreenState extends State<BrowseListingsScreen> {
     }
 
     try {
-      final response = await http
-          .get(
-            Uri.parse('$apiBaseUrl/listings'),
-            headers: const {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/listings'),
+        headers: const {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -70,19 +70,20 @@ class _BrowseListingsScreenState extends State<BrowseListingsScreen> {
         );
       }
 
-      final listings = decoded
-          .whereType<Map>()
-          .map<Map<String, String>>((item) {
+      final listings =
+          decoded.whereType<Map>().map<Map<String, String>>((item) {
         final map = Map<String, dynamic>.from(item);
 
         return {
           'listing_id': map['listing_id']?.toString() ?? '',
           'donor_id': map['donor_id']?.toString() ?? '',
+          'donor_name': map['donor_name']?.toString() ?? '',
           'name': map['food_name']?.toString() ?? 'Unnamed food',
           'category': map['category']?.toString() ?? 'Other',
           'quantity': map['quantity']?.toString() ?? '',
           'location': map['pickup_location']?.toString() ?? '',
           'description': map['description']?.toString() ?? '',
+          'expiry_date': map['expiry_date']?.toString() ?? '',
           'status': map['status']?.toString() ?? 'Available',
         };
       }).toList();
@@ -122,9 +123,8 @@ class _BrowseListingsScreenState extends State<BrowseListingsScreen> {
       final name = food["name"] ?? "";
       final category = food["category"] ?? "";
 
-      final matchesSearch = name
-          .toLowerCase()
-          .contains(_searchController.text.toLowerCase());
+      final matchesSearch =
+          name.toLowerCase().contains(_searchController.text.toLowerCase());
 
       final matchesCategory =
           selectedCategory == "All" || category == selectedCategory;
@@ -275,102 +275,160 @@ class _BrowseListingsScreenState extends State<BrowseListingsScreen> {
         itemCount: filtered.length,
         itemBuilder: (context, index) {
           final food = filtered[index];
-          final status = food["status"] ?? "Available";
+          final status = (food["status"] ?? "").trim();
           final isAvailable = status.toLowerCase() == "available";
+          final pickupLocation = (food["location"] ?? "").trim();
+          final availabilityText = isAvailable
+              ? "Available Today"
+              : status.isNotEmpty
+                  ? status
+                  : "Status unknown";
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          food["name"] ?? "Unnamed food",
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+          return InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FoodListingDetailsPage(
+                    listing: food,
+                  ),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            food["name"] ?? "Unnamed food",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      const Icon(Icons.favorite_border, color: Colors.red),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.category, color: Colors.green),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(food["category"] ?? "Other")),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.inventory_2, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(food["quantity"] ?? "")),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, color: Colors.red),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(food["location"] ?? "")),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Row(
-                    children: [
-                      Icon(Icons.calendar_today, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text("Available Today"),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Chip(
-                    label: Text(status),
-                    backgroundColor: isAvailable
-                        ? Colors.green.shade100
-                        : Colors.orange.shade100,
-                  ),
-                  const SizedBox(height: 15),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey.shade300,
-                        disabledForegroundColor: Colors.grey.shade600,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: !isAvailable
-                          ? null
-                          : () {
+                        const Icon(Icons.favorite_border, color: Colors.red),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.category, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(food["category"] ?? "Other")),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.inventory_2, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(food["quantity"] ?? "")),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            pickupLocation.isNotEmpty
+                                ? pickupLocation
+                                : "Not specified",
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Text(availabilityText),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Chip(
+                      label: Text(status.isNotEmpty ? status : "Unknown"),
+                      backgroundColor: isAvailable
+                          ? Colors.green.shade100
+                          : Colors.orange.shade100,
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => RequestFoodScreen(
-                                    foodItem: food,
+                                  builder: (_) => MessageComposeScreen(
+                                    donorName: food["donor_name"] ??
+                                        "Community donor",
+                                    listingName: food["name"],
+                                    donorId:
+                                        int.tryParse(food["donor_id"] ?? ""),
                                   ),
                                 ),
                               );
                             },
-                      child: Text(
-                        isAvailable ? "Request Food" : "Not Available",
-                      ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF2E7D32),
+                              side: const BorderSide(
+                                color: Color(0xFF2E7D32),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: const Icon(Icons.message_outlined, size: 18),
+                            label: const Text("Message"),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey.shade300,
+                              disabledForegroundColor: Colors.grey.shade600,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: !isAvailable
+                                ? null
+                                : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => RequestFoodScreen(
+                                          foodItem: food,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                            child: Text(
+                              isAvailable ? "Request Food" : "Not Available",
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

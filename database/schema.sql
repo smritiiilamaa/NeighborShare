@@ -96,6 +96,17 @@ CREATE TABLE food_listings (
             )
         ),
 
+    expiry_date DATE,
+
+    is_flagged BOOLEAN NOT NULL DEFAULT FALSE,
+    flag_reason TEXT,
+    flagged_by VARCHAR(150),
+    flagged_at TIMESTAMP,
+    moderation_status VARCHAR(20) NOT NULL DEFAULT 'Pending'
+        CHECK (
+            moderation_status IN ('Pending', 'Under Review', 'Resolved')
+        ),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_listing_donor
@@ -148,6 +159,7 @@ CREATE TABLE messages (
     recipient_id INTEGER NOT NULL,
     message TEXT NOT NULL,
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT fk_messages_donor
         FOREIGN KEY (donor_id)
@@ -163,11 +175,14 @@ CREATE TABLE messages (
 --Incident_reports--
 CREATE TABLE incident_reports (
     incident_id SERIAL PRIMARY KEY,
-    admin_id INTEGER NOT NULL,
-    title VARCHAR(150) NOT NULL,
+    admin_id INTEGER,
+    title VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'Open',
+    reported_by VARCHAR(150),
+    status VARCHAR(20) NOT NULL DEFAULT 'Open'
+        CHECK (status IN ('Open', 'Investigating', 'Resolved')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_incident_admin
         FOREIGN KEY (admin_id)

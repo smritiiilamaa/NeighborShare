@@ -327,6 +327,120 @@ const deleteListing = async (req, res) => {
     }
 };
 
+const allowedModerationStatuses = ["Pending", "Under Review", "Resolved"];
+
+const getFlaggedListings = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT
+                food_listings.*,
+                donor_profiles.full_name AS donor_name
+             FROM food_listings
+             JOIN donor_profiles
+                ON food_listings.donor_id = donor_profiles.donor_id
+             WHERE food_listings.is_flagged = TRUE
+             ORDER BY food_listings.flagged_at DESC NULLS LAST`
+        );
+
+        return res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Error retrieving flagged listings."
+        });
+    }
+};
+
+const flagListing = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason, flagged_by } = req.body;
+
+        if (!reason?.trim()) {
+            return res.status(400).json({
+                message: "A reason is required to flag a listing."
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE food_listings
+             SET is_flagged = TRUE,
+                 flag_reason = $1,
+                 flagged_by = $2,
+                 flagged_at = CURRENT_TIMESTAMP,
+                 moderation_status = 'Pending'
+             WHERE listing_id = $3
+             RETURNING *`,
+            [reason.trim(), flagged_by?.trim() || null, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Food listing not found."
+            });
+        }
+
+        return res.status(200).json({
+            message: "Listing flagged successfully.",
+            listing: result.rows[0]
+        });
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Error flagging food listing."
+        });
+    }
+};
+
+const updateModerationStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { moderation_status } = req.body;
+
+        if (!moderation_status?.trim()) {
+            return res.status(400).json({
+                message: "Moderation status is required."
+            });
+        }
+
+        const cleanStatus = moderation_status.trim();
+
+        if (!allowedModerationStatuses.includes(cleanStatus)) {
+            return res.status(400).json({
+                message: "Invalid moderation status."
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE food_listings
+             SET moderation_status = $1,
+                 is_flagged = CASE WHEN $1 = 'Resolved' THEN FALSE ELSE is_flagged END
+             WHERE listing_id = $2
+             RETURNING *`,
+            [cleanStatus, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Food listing not found."
+            });
+        }
+
+        return res.status(200).json({
+            message: "Moderation status updated successfully.",
+            listing: result.rows[0]
+        });
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Error updating moderation status."
+        });
+    }
+};
+
 module.exports = {
     createListing,
     getAllListings,
@@ -334,5 +448,8 @@ module.exports = {
     getListingsByDonor,
     updateListing,
     getAvailableListings,
-    deleteListing
+    deleteListing,
+    getFlaggedListings,
+    flagListing,
+    updateModerationStatus
 };

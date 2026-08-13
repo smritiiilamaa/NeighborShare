@@ -7,6 +7,8 @@ CREATE TABLE user_accounts (
     password_hash TEXT NOT NULL,
     role VARCHAR(20) NOT NULL
         CHECK (role IN ('Donor', 'Recipient', 'Administrator')),
+    account_status VARCHAR(20) NOT NULL DEFAULT 'Active'
+        CHECK (account_status IN ('Active', 'Banned')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -138,3 +140,37 @@ CREATE TABLE food_requests (
     CONSTRAINT unique_recipient_listing_request
         UNIQUE (listing_id, recipient_id)
 );
+
+--Messages--
+CREATE TABLE messages (
+    message_id SERIAL PRIMARY KEY,
+    donor_id INTEGER NOT NULL,
+    recipient_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_messages_donor
+        FOREIGN KEY (donor_id)
+        REFERENCES donor_profiles(donor_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_messages_recipient
+        FOREIGN KEY (recipient_id)
+        REFERENCES recipient_profiles(recipient_id)
+        ON DELETE CASCADE
+);
+
+--Incident_reports--
+CREATE TABLE incident_reports (
+    incident_id SERIAL PRIMARY KEY,
+    admin_id INTEGER NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_incident_admin
+        FOREIGN KEY (admin_id)
+        REFERENCES user_accounts(account_id)
+);
+

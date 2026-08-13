@@ -3,6 +3,7 @@ const cors = require("cors");
 
 const accountRoutes = require("./routes/accountRoutes");
 const donorRoutes = require("./routes/donorRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const recipientRoutes = require("./routes/recipientRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const foodRequestRoutes = require("./routes/foodRequestRoutes");
@@ -16,5 +17,6 @@ app.use("/api/recipients", recipientRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/requests", foodRequestRoutes);
 app.use("/api/accounts", accountRoutes);
+app.use("/api/admin", adminRoutes);
 
 module.exports = app;

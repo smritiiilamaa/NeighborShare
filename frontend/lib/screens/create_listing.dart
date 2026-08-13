@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
-import 'my_listings.dart';
+import 'listing_confirmation.dart';
 
 class CreateListingScreen extends StatefulWidget {
   final int? accountId;
@@ -117,7 +117,24 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       });
 
       if (response.statusCode == 201) {
-        await _showSuccessDialog();
+        final createdListing =
+            responseData?['listing'] as Map<String, dynamic>? ??
+                {
+                  'food_name': _foodNameController.text.trim(),
+                  'category': _selectedCategory,
+                  'quantity': _quantityController.text.trim(),
+                  'pickup_location': _locationController.text.trim(),
+                  'description': _descriptionController.text.trim(),
+                };
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ListingConfirmationScreen(
+              accountId: widget.accountId,
+              listing: createdListing,
+            ),
+          ),
+        );
         return;
       }
 
@@ -138,49 +155,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
       debugPrint('Create listing error: $error');
     }
-  }
-
-  Future<void> _showSuccessDialog() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          icon: const Icon(
-            Icons.check_circle,
-            color: Color(0xFF2E7D32),
-            size: 60,
-          ),
-          title: const Text('Listing Created'),
-          content: const Text(
-            'Your food listing was saved successfully.',
-            textAlign: TextAlign.center,
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                ),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => MyListingsScreen(
-                        accountId: widget.accountId,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('View My Listings'),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showError(String message) {

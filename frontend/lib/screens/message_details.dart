@@ -15,6 +15,10 @@ class MessageDetailsScreen extends StatefulWidget {
   final int? donorId;
   final int? recipientId;
 
+  // Which side of the conversation is viewing/sending -- determines which
+  // messages render as "mine" and what sender_role a reply is tagged with.
+  final String viewerRole;
+
   const MessageDetailsScreen({
     super.key,
     required this.personName,
@@ -22,6 +26,7 @@ class MessageDetailsScreen extends StatefulWidget {
     this.initialMessages,
     this.donorId,
     this.recipientId,
+    this.viewerRole = 'Recipient',
   });
 
   @override
@@ -83,7 +88,7 @@ class _MessageDetailsScreenState
               ..addAll(decoded.whereType<Map>().map(
                     (item) => {
                       'message': item['message'],
-                      'isMe': item['donor_id'] == widget.donorId,
+                      'isMe': item['sender_role'] == widget.viewerRole,
                       'time': item['sent_at']?.toString() ?? '',
                     },
                   ));
@@ -216,6 +221,7 @@ class _MessageDetailsScreenState
               'donor_id': widget.donorId,
               'recipient_id': widget.recipientId,
               'message': message,
+              'sender_role': widget.viewerRole,
             }),
           )
           .timeout(const Duration(seconds: 20));

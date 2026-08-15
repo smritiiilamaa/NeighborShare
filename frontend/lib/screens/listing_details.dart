@@ -4,16 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
+import '../services/recipient_session.dart';
 import 'message_compose.dart';
 import 'request_food.dart';
 
 class FoodListingDetailsPage extends StatelessWidget {
   final Map<String, String> listing;
+  // Only set when threaded from a screen that already knows it. Any other
+  // entry point falls back to RecipientSession instead of a placeholder.
+  final int? recipientId;
 
   const FoodListingDetailsPage({
     super.key,
     required this.listing,
+    this.recipientId,
   });
+
+  int get _effectiveRecipientId =>
+      recipientId ?? RecipientSession.recipientId ?? 1;
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
@@ -196,6 +204,7 @@ class FoodListingDetailsPage extends StatelessWidget {
                         donorName: donorName,
                         listingName: foodName,
                         donorId: donorId,
+                        recipientId: _effectiveRecipientId,
                       ),
                     ),
                   );
@@ -228,6 +237,7 @@ class FoodListingDetailsPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => RequestFoodScreen(
                         foodItem: listing,
+                        recipientId: _effectiveRecipientId,
                       ),
                     ),
                   );

@@ -6,6 +6,7 @@ const {
     createFoodRequest,
     getAllFoodRequests,
     getFoodRequestById,
+    getRequestsByRecipient,
     getRequestsByDonor,
     updateFoodRequestStatus,
     deleteFoodRequest
@@ -14,6 +15,7 @@ const {
 router.post("/", createFoodRequest);
 router.get("/", getAllFoodRequests);
 router.get("/donor/:accountId", getRequestsByDonor);
+router.get("/recipient/:id", getRequestsByRecipient);
 router.get("/:id", getFoodRequestById);
 router.put("/:id/status", updateFoodRequestStatus);
 router.delete("/:id", deleteFoodRequest);

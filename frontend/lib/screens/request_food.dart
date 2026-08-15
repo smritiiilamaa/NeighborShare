@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
+import '../services/recipient_session.dart';
+import 'claim_confirmation.dart';
 
 class RequestFoodScreen extends StatefulWidget {
   final Map<String, String> foodItem;
 
-  // Temporary default for testing until recipient login/session is added.
-  final int recipientId;
+  // Only set when threaded from a screen that already knows it. Any other
+  // entry point falls back to RecipientSession instead of a placeholder.
+  final int? recipientId;
 
   const RequestFoodScreen({
     super.key,
     required this.foodItem,
-    this.recipientId = 1,
+    this.recipientId,
   });
 
   @override
@@ -53,6 +56,20 @@ class _RequestFoodScreenState extends State<RequestFoodScreen> {
     return null;
   }
 
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Phone number is required';
+    }
+
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digitsOnly.length != 10) {
+      return 'Enter a valid 10-digit phone number';
+    }
+
+    return null;
+  }
+
   Future<void> _submitRequest() async {
     FocusScope.of(context).unfocus();
 
@@ -70,7 +87,8 @@ class _RequestFoodScreenState extends State<RequestFoodScreen> {
       return;
     }
 
-    final recipientId = widget.recipientId;
+    final recipientId =
+        widget.recipientId ?? RecipientSession.recipientId ?? 1;
 
     if (recipientId <= 0) {
       _showError(
@@ -127,7 +145,16 @@ class _RequestFoodScreenState extends State<RequestFoodScreen> {
       });
 
       if (response.statusCode == 201) {
-        await _showSuccessDialog();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ClaimConfirmationScreen(
+              foodItem: widget.foodItem,
+              requesterName: _nameController.text,
+              phoneNumber: _phoneController.text,
+              pickupTime: _pickupTime,
+            ),
+          ),
+        );
         return;
       }
 
@@ -148,42 +175,6 @@ class _RequestFoodScreenState extends State<RequestFoodScreen> {
 
       debugPrint('Submit food request error: $error');
     }
-  }
-
-  Future<void> _showSuccessDialog() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          icon: const Icon(
-            Icons.check_circle,
-            color: Color(0xFF2E7D32),
-            size: 60,
-          ),
-          title: const Text('Request Submitted'),
-          content: const Text(
-            'Your food request was saved successfully.',
-            textAlign: TextAlign.center,
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                ),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  Navigator.of(context).pop(true);
-                },
-                child: const Text('Back to Listings'),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showError(String message) {
@@ -306,8 +297,7 @@ class _RequestFoodScreenState extends State<RequestFoodScreen> {
                       prefixIcon: Icon(Icons.phone),
                       border: OutlineInputBorder(),
                     ),
-                    validator: (value) =>
-                        _requiredValidator(value, 'Phone number'),
+                    validator: _validatePhone,
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(

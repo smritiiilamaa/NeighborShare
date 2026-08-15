@@ -1,18 +1,21 @@
-/// Tracks whether an Administrator is currently authenticated for this
-/// app session. Set by [AdminLoginScreen] on a successful login and
-/// checked by [AdminRouteGuard] before any admin-only screen is shown.
+/// Tracks the currently authenticated Administrator for this app session.
 class AdminSession {
   AdminSession._();
 
   static bool _isAuthenticated = false;
+  static int? _accountId;
 
   static bool get isAuthenticated => _isAuthenticated;
 
-  static void login() {
+  static int? get accountId => _accountId;
+
+  static void login(int accountId) {
     _isAuthenticated = true;
+    _accountId = accountId;
   }
 
   static void logout() {
     _isAuthenticated = false;
+    _accountId = null;
   }
 }

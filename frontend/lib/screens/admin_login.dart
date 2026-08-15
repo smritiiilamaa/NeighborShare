@@ -87,7 +87,29 @@ Future<void> _handleLogin() async {
     if (!mounted) return;
 
     if (response.statusCode == 200) {
-      AdminSession.login();
+      final account = responseData['account'];
+
+      if (account is! Map<String, dynamic> ||
+          account['account_id'] == null) {
+        setState(() {
+          _errorMessage =
+              'Administrator account information was not returned by the server.';
+        });
+        return;
+      }
+
+      final adminAccountId =
+          int.tryParse(account['account_id'].toString());
+
+      if (adminAccountId == null || adminAccountId <= 0) {
+        setState(() {
+          _errorMessage =
+              'Invalid administrator account information.';
+        });
+        return;
+      }
+
+      AdminSession.login(adminAccountId);
 
       Navigator.pushReplacement(
         context,

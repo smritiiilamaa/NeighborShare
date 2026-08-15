@@ -84,7 +84,7 @@ const loginAccount = async (req, res) => {
         const normalizedEmail = email.trim().toLowerCase();
 
         const result = await pool.query(
-            `SELECT account_id, email, password_hash, role
+            `SELECT account_id, email, password_hash, role, account_status
              FROM user_accounts
              WHERE email = $1`,
             [normalizedEmail]
@@ -106,6 +106,13 @@ const loginAccount = async (req, res) => {
         if (!passwordMatches) {
             return res.status(401).json({
                 message: "Invalid email or password."
+            });
+        }
+
+        if (account.account_status === "Banned") {
+            return res.status(403).json({
+                message:
+                    "This account has been banned for community guideline violations."
             });
         }
 

@@ -223,6 +223,12 @@ CREATE TABLE messages (
 
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
 
+    -- Who actually wrote this message, since donor_id/recipient_id above
+    -- identify the conversation's two participants, not the author.
+    sender_role VARCHAR(20) NOT NULL DEFAULT 'Recipient'
+        CONSTRAINT messages_sender_role_check
+        CHECK (sender_role IN ('Donor', 'Recipient')),
+
     CONSTRAINT fk_messages_donor
         FOREIGN KEY (donor_id)
         REFERENCES donor_profiles(donor_id)

@@ -4,10 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
+import '../services/recipient_session.dart';
 import 'recipient_dashboard.dart';
 
 class CreateRecipientProfileScreen extends StatefulWidget {
-  const CreateRecipientProfileScreen({super.key});
+  final int? recipientId;
+
+  const CreateRecipientProfileScreen({
+    super.key,
+    this.recipientId,
+  });
+
+  bool get isEditMode => recipientId != null;
 
   @override
   State<CreateRecipientProfileScreen> createState() =>
@@ -28,6 +36,8 @@ class _CreateRecipientProfileScreenState
 
   String _selectedDietaryPreference = 'None';
   bool _isSubmitting = false;
+  bool _isLoadingProfile = false;
+  int? _createdRecipientId;
 
   final List<String> _dietaryOptions = [
     'None',
@@ -39,6 +49,15 @@ class _CreateRecipientProfileScreenState
     'Halal',
     'Kosher',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.isEditMode) {
+      _loadRecipientProfile();
+    }
+  }
 
   @override
   void dispose() {
@@ -98,6 +117,89 @@ class _CreateRecipientProfileScreenState
     return null;
   }
 
+  Future<void> _loadRecipientProfile() async {
+    final recipientId = widget.recipientId;
+
+    if (recipientId == null) return;
+
+    setState(() {
+      _isLoadingProfile = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/recipients/$recipientId'),
+        headers: const {
+          'Accept': 'application/json',
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode != 200) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+
+        _showErrorSnackBar(
+          'Unable to load recipient profile.',
+        );
+
+        return;
+      }
+
+      final decoded =
+          jsonDecode(response.body) as Map<String, dynamic>;
+
+      _fullNameController.text =
+          decoded['full_name']?.toString() ?? '';
+
+      _emailController.text =
+          decoded['email']?.toString() ?? '';
+
+      _phoneController.text =
+          decoded['phone_number']?.toString() ?? '';
+
+      _streetAddressController.text =
+          decoded['street_address']?.toString() ?? '';
+
+      _cityController.text =
+          decoded['city']?.toString() ?? '';
+
+      _postalCodeController.text =
+          decoded['postal_code']?.toString() ?? '';
+
+      _allergiesController.text =
+          decoded['allergies']?.toString() ?? '';
+
+      final dietaryPreference =
+          decoded['dietary_preference']?.toString();
+
+      if (dietaryPreference != null &&
+          _dietaryOptions.contains(dietaryPreference)) {
+        _selectedDietaryPreference = dietaryPreference;
+      }
+
+      setState(() {
+        _isLoadingProfile = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingProfile = false;
+      });
+
+      _showErrorSnackBar(
+        'Could not load recipient profile.',
+      );
+
+      debugPrint(
+        'Load recipient profile error: $error',
+      );
+    }
+  }
+
   Future<void> _handleSubmit() async {
     FocusScope.of(context).unfocus();
 
@@ -108,33 +210,71 @@ class _CreateRecipientProfileScreenState
     setState(() => _isSubmitting = true);
 
     try {
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/recipients'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'full_name': _fullNameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'phone_number': _phoneController.text.trim(),
-          'street_address': _streetAddressController.text.trim(),
-          'city': _cityController.text.trim(),
-          'postal_code': _postalCodeController.text.trim(),
-          'dietary_preference': _selectedDietaryPreference,
-          'allergies': _allergiesController.text.trim().isEmpty
-              ? null
-              : _allergiesController.text.trim(),
-        }),
-      );
+
+      final uri = widget.isEditMode
+          ? Uri.parse('$apiBaseUrl/recipients/${widget.recipientId}')
+          : Uri.parse('$apiBaseUrl/recipients');
+
+      final requestBody = jsonEncode({
+        'full_name': _fullNameController.text.trim(),
+        'email': _emailController.text.trim().toLowerCase(),
+        'phone_number': _phoneController.text.trim(),
+        'street_address': _streetAddressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'postal_code': _postalCodeController.text.trim().toUpperCase(),
+        'dietary_preference': _selectedDietaryPreference,
+        'allergies': _allergiesController.text.trim().isEmpty
+            ? null
+            : _allergiesController.text.trim(),
+      });
+
+      final response = widget.isEditMode
+          ? await http.put(
+              uri,
+              headers: const {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+            )
+          : await http.post(
+              uri,
+              headers: const {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+            );
 
       if (!mounted) return;
 
       setState(() => _isSubmitting = false);
 
-      if (response.statusCode == 201) {
+      if (
+          (!widget.isEditMode &&
+              response.statusCode == 201) ||
+          (widget.isEditMode &&
+              response.statusCode == 200)
+      ) {
+        if (!widget.isEditMode) {
+          final body = jsonDecode(response.body) as Map<String, dynamic>;
+          final recipientData =
+              body['recipient'] as Map<String, dynamic>? ?? body;
+          _createdRecipientId =
+              (recipientData['recipient_id'] as num?)?.toInt();
+        }
+
+        final loggedInRecipientId = widget.recipientId ?? _createdRecipientId;
+        if (loggedInRecipientId != null) {
+          RecipientSession.login(loggedInRecipientId);
+        }
+
         _showSuccessDialog();
       } else {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         _showErrorSnackBar(
-          body['message'] as String? ?? 'Failed to create recipient profile.',
+          body['message'] as String? ??
+              (widget.isEditMode
+                ? 'Failed to update recipient profile.'
+                : 'Failed to create recipient profile.'),
         );
       }
     } catch (error) {
@@ -191,8 +331,10 @@ class _CreateRecipientProfileScreenState
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Profile Created!',
+                Text(
+                  widget.isEditMode
+                      ? 'Profile Updated!'
+                      : 'Profile Created!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -200,9 +342,11 @@ class _CreateRecipientProfileScreenState
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Welcome aboard, ${_fullNameController.text.trim().isEmpty ? 'Neighbour' : _fullNameController.text.trim()}! '
-                  'Your recipient profile has been successfully created. '
-                  'You can now browse and request food donations near you.',
+                  widget.isEditMode
+                      ? 'Your recipient profile has been successfully updated.'
+                      : 'Welcome aboard, ${_fullNameController.text.trim().isEmpty ? 'Neighbour' : _fullNameController.text.trim()}! '
+                        'Your recipient profile has been successfully created. '
+                        'You can now browse and request food donations near you.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -222,15 +366,26 @@ class _CreateRecipientProfileScreenState
                       ),
                     ),
                     onPressed: () {
-                      _resetForm();
+                      if (!widget.isEditMode) {
+                        _resetForm();
+                      }
 
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (_) => const RecipientDashboardScreen(),
+                          builder: (_) => RecipientDashboardScreen(
+                            recipientId: widget.recipientId ??
+                                _createdRecipientId ??
+                                RecipientSession.recipientId ??
+                                1,
+                          ),
                         ),
                       );
                     },
-                    child: const Text('Go to Dashboard'),
+                    child: Text(
+                      widget.isEditMode
+                          ? 'Back to Dashboard'
+                          : 'Go to Dashboard',
+                    ),
                   ),
                 ),
               ],
@@ -305,7 +460,11 @@ class _CreateRecipientProfileScreenState
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _isLoadingProfile
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : SingleChildScrollView(
           padding: EdgeInsets.zero,
           child: Center(
             child: ConstrainedBox(
@@ -483,9 +642,11 @@ class _CreateRecipientProfileScreenState
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Become a Recipient',
-            style: TextStyle(
+          Text(
+            widget.isEditMode
+                ? 'Update Recipient Profile'
+                : 'Become a Recipient',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 26,
               fontWeight: FontWeight.bold,
@@ -612,9 +773,11 @@ class _CreateRecipientProfileScreenState
                   strokeWidth: 2.5,
                 ),
               )
-            : const Text(
-                'Create Recipient Profile',
-                style: TextStyle(
+            : Text(
+                widget.isEditMode
+                    ? 'Update Recipient Profile'
+                    : 'Create Recipient Profile',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),

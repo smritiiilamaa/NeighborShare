@@ -2,6 +2,25 @@ const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
+const isValidEmail = (email) => {
+    const emailRegex =
+        /^[\w.\-]+@([\w\-]+\.)+[\w\-]{2,}$/;
+
+    return emailRegex.test(email);
+};
+
+const isValidPhone = (phone) => {
+    const digitsOnly = phone.replace(/\D/g, "");
+    return digitsOnly.length === 10;
+};
+
+const isValidCanadianPostalCode = (postalCode) => {
+    const postalRegex =
+        /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z] ?\d[ABCEGHJ-NPRSTV-Z]\d$/i;
+
+    return postalRegex.test(postalCode);
+};
+
 const createDonor = async (req, res) => {
     let client;
     let transactionStarted = false;
@@ -207,6 +226,27 @@ const updateDonor = async (req, res) => {
             });
         }
 
+        const normalizedEmail =
+            email.trim().toLowerCase();
+
+        if (!isValidEmail(normalizedEmail)) {
+            return res.status(400).json({
+                message: "Enter a valid email address."
+            });
+        }
+
+        if (!isValidPhone(phone_number.trim())) {
+            return res.status(400).json({
+                message: "Enter a valid 10-digit phone number."
+            });
+        }
+
+        if (!isValidCanadianPostalCode(postal_code.trim())) {
+            return res.status(400).json({
+                message: "Enter a valid Canadian postal code."
+            });
+        }
+
         const result = await pool.query(
             `UPDATE donor_profiles
              SET full_name = $1,
@@ -219,7 +259,7 @@ const updateDonor = async (req, res) => {
              RETURNING *`,
             [
                 full_name.trim(),
-                email.trim().toLowerCase(),
+                normalizedEmail,
                 phone_number.trim(),
                 street_address.trim(),
                 city.trim(),

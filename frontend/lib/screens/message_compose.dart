@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
+import '../services/recipient_session.dart';
 import 'message_details.dart';
 
 class MessageComposeScreen extends StatefulWidget {
@@ -11,10 +12,10 @@ class MessageComposeScreen extends StatefulWidget {
   final String? listingName;
   final ValueChanged<String>? onSend;
 
-  // Real IDs for sending a live message. recipientId defaults to 1, matching
-  // the temporary default used elsewhere until recipient login exists.
   final int? donorId;
-  final int recipientId;
+  // Only set when threaded from a screen that already knows it. Any other
+  // entry point falls back to RecipientSession instead of a placeholder.
+  final int? recipientId;
 
   // Optional HTTP client for testing. If null, the package http is used.
   final dynamic httpClient;
@@ -25,7 +26,7 @@ class MessageComposeScreen extends StatefulWidget {
     this.listingName,
     this.onSend,
     this.donorId,
-    this.recipientId = 1,
+    this.recipientId,
     this.httpClient,
   });
 
@@ -37,6 +38,9 @@ class _MessageComposeScreenState extends State<MessageComposeScreen> {
   final TextEditingController _messageController = TextEditingController();
   String? _validationMessage;
   bool _isSending = false;
+
+  int get _effectiveRecipientId =>
+      widget.recipientId ?? RecipientSession.recipientId ?? 1;
 
   @override
   void dispose() {
@@ -80,8 +84,9 @@ class _MessageComposeScreenState extends State<MessageComposeScreen> {
             headers: const {'Content-Type': 'application/json'},
             body: jsonEncode({
               'donor_id': widget.donorId,
-              'recipient_id': widget.recipientId,
+              'recipient_id': _effectiveRecipientId,
               'message': message,
+              'sender_role': 'Recipient',
             }),
           )
           .timeout(const Duration(seconds: 20));
@@ -99,7 +104,8 @@ class _MessageComposeScreenState extends State<MessageComposeScreen> {
                   ? '?'
                   : widget.donorName.characters.first.toUpperCase(),
               donorId: widget.donorId,
-              recipientId: widget.recipientId,
+              recipientId: _effectiveRecipientId,
+              viewerRole: 'Recipient',
             ),
           ),
         );

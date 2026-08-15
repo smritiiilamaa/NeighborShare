@@ -30,6 +30,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       TextEditingController();
   final TextEditingController _descriptionController =
       TextEditingController();
+  final TextEditingController _expiryDateController =
+      TextEditingController();
 
   final List<String> _categories = const [
     'Cooked Meals',
@@ -41,6 +43,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   String _selectedCategory = 'Cooked Meals';
   bool _isSubmitting = false;
+  DateTime? _selectedExpiryDate;
 
   @override
   void dispose() {
@@ -48,6 +51,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _quantityController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
+    _expiryDateController.dispose();
     super.dispose();
   }
 
@@ -55,7 +59,72 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (value == null || value.trim().isEmpty) {
       return '$fieldName is required';
     }
+
     return null;
+  }
+
+  String? _validateExpiryDate(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Expiry date is required';
+    }
+
+    if (_selectedExpiryDate == null) {
+      return 'Please select a valid expiry date';
+    }
+
+    final now = DateTime.now();
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final expiryDate = DateTime(
+      _selectedExpiryDate!.year,
+      _selectedExpiryDate!.month,
+      _selectedExpiryDate!.day,
+    );
+
+    if (expiryDate.isBefore(today)) {
+      return 'Expiry date cannot be in the past';
+    }
+
+    return null;
+  }
+
+  Future<void> _selectExpiryDate() async {
+    final now = DateTime.now();
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedExpiryDate ?? today,
+      firstDate: today,
+      lastDate: DateTime(
+        today.year + 5,
+        today.month,
+        today.day,
+      ),
+    );
+
+    if (pickedDate == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedExpiryDate = pickedDate;
+
+      _expiryDateController.text =
+          '${pickedDate.year.toString().padLeft(4, '0')}-'
+          '${pickedDate.month.toString().padLeft(2, '0')}-'
+          '${pickedDate.day.toString().padLeft(2, '0')}';
+    });
   }
 
   Future<void> _createListing() async {
@@ -93,6 +162,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               'quantity': _quantityController.text.trim(),
               'pickup_location': _locationController.text.trim(),
               'description': _descriptionController.text.trim(),
+              'expiry_date': _expiryDateController.text.trim(),
             }),
           )
           .timeout(const Duration(seconds: 20));
@@ -102,6 +172,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (response.body.isNotEmpty) {
         try {
           final decoded = jsonDecode(response.body);
+
           if (decoded is Map<String, dynamic>) {
             responseData = decoded;
           }
@@ -125,6 +196,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   'quantity': _quantityController.text.trim(),
                   'pickup_location': _locationController.text.trim(),
                   'description': _descriptionController.text.trim(),
+                  'expiry_date': _expiryDateController.text.trim(),
                 };
 
         Navigator.of(context).pushReplacement(
@@ -135,6 +207,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             ),
           ),
         );
+
         return;
       }
 
@@ -150,7 +223,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       });
 
       _showError(
-        'Could not connect to the backend. Make sure the Node server is running.',
+        'Could not connect to the backend. Please try again.',
       );
 
       debugPrint('Create listing error: $error');
@@ -206,6 +279,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 30),
+
                   TextFormField(
                     controller: _foodNameController,
                     decoration: const InputDecoration(
@@ -216,7 +290,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     validator: (value) =>
                         _requiredValidator(value, 'Food name'),
                   ),
+
                   const SizedBox(height: 20),
+
                   DropdownButtonFormField<String>(
                     initialValue: _selectedCategory,
                     decoration: const InputDecoration(
@@ -234,12 +310,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         ? null
                         : (value) {
                             if (value == null) return;
+
                             setState(() {
                               _selectedCategory = value;
                             });
                           },
                   ),
+
                   const SizedBox(height: 20),
+
                   TextFormField(
                     controller: _quantityController,
                     decoration: const InputDecoration(
@@ -250,7 +329,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     validator: (value) =>
                         _requiredValidator(value, 'Quantity'),
                   ),
+
                   const SizedBox(height: 20),
+
                   TextFormField(
                     controller: _locationController,
                     decoration: const InputDecoration(
@@ -261,7 +342,27 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     validator: (value) =>
                         _requiredValidator(value, 'Pickup location'),
                   ),
+
                   const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _expiryDateController,
+                    readOnly: true,
+                    onTap: _isSubmitting
+                        ? null
+                        : _selectExpiryDate,
+                    decoration: const InputDecoration(
+                      labelText: 'Expiry Date',
+                      hintText: 'Select expiry date',
+                      prefixIcon: Icon(Icons.calendar_today),
+                      suffixIcon: Icon(Icons.arrow_drop_down),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: _validateExpiryDate,
+                  ),
+
+                  const SizedBox(height: 20),
+
                   TextFormField(
                     controller: _descriptionController,
                     maxLines: 3,
@@ -271,7 +372,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       border: OutlineInputBorder(),
                     ),
                   ),
+
                   const SizedBox(height: 30),
+
                   SizedBox(
                     height: 52,
                     child: ElevatedButton.icon(

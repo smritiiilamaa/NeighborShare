@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_config.dart';
+import '../services/admin_session.dart';
 import 'listing_details.dart';
 
 class FlaggedListingsPage extends StatefulWidget {
@@ -78,9 +79,32 @@ class _FlaggedListingsPageState extends State<FlaggedListingsPage> {
   }
 
   Future<void> _removeListing(int listingId, String title) async {
+    final adminAccountId = AdminSession.accountId;
+
+    if (!AdminSession.isAuthenticated ||
+        adminAccountId == null) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Administrator permission is required to remove listings.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
     try {
       final response = await http
-          .delete(Uri.parse('$apiBaseUrl/listings/$listingId'))
+          .delete(
+            Uri.parse('$apiBaseUrl/listings/$listingId'),
+            headers: {
+              'Accept': 'application/json',
+              'x-admin-account-id': adminAccountId.toString(),
+            },
+          )
           .timeout(const Duration(seconds: 20));
 
       if (!mounted) return;
@@ -96,9 +120,26 @@ class _FlaggedListingsPageState extends State<FlaggedListingsPage> {
         return;
       }
 
+      String message = 'Unable to remove the listing.';
+
+      if (response.body.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(response.body);
+
+          if (decoded is Map<String, dynamic> &&
+              decoded['message'] != null) {
+            message = decoded['message'].toString();
+          }
+        } catch (_) {}
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to remove the listing.')),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade700,
+        ),
       );
+
     } catch (error) {
       if (!mounted) return;
 

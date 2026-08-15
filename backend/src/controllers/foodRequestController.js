@@ -48,9 +48,31 @@ const createFoodRequest = async (req, res) => {
             });
         }
 
-        if (listingResult.rows[0].status !== "Available") {
+        const listingStatus = listingResult.rows[0].status;
+
+        if (listingStatus === "Reserved" || listingStatus === "Collected") {
+            return res.status(409).json({
+                message: "This food listing has already been claimed."
+            });
+        }
+
+        if (listingStatus !== "Available") {
             return res.status(409).json({
                 message: "This food listing is no longer available."
+            });
+        }
+
+        const existingRequestResult = await pool.query(
+            `SELECT request_id
+            FROM food_requests
+            WHERE listing_id = $1
+                AND recipient_id = $2`,
+            [listing_id, recipient_id]
+        );
+
+        if (existingRequestResult.rows.length > 0) {
+            return res.status(409).json({
+                message: "You have already requested this food listing."
             });
         }
 
@@ -114,6 +136,15 @@ const getAllFoodRequests = async (req, res) => {
 const getFoodRequestById = async (req, res) => {
     try {
         const { id } = req.params;
+        const { recipient_id: recipientId } = req.query || {};
+
+        const parsedRecipientId = Number(recipientId);
+
+        if (!Number.isInteger(parsedRecipientId) || parsedRecipientId <= 0) {
+            return res.status(400).json({
+                message: "A valid recipient ID is required to verify request ownership."
+            });
+        }
 
         const result = await pool.query(
             `SELECT
@@ -135,7 +166,15 @@ const getFoodRequestById = async (req, res) => {
             });
         }
 
-        return res.status(200).json(result.rows[0]);
+        const request = result.rows[0];
+
+        if (String(request.recipient_id) !== String(parsedRecipientId)) {
+            return res.status(403).json({
+                message: "Request does not belong to this recipient."
+            });
+        }
+
+        return res.status(200).json(request);
     } catch (error) {
         console.error(error);
 
@@ -206,6 +245,35 @@ const updateFoodRequestStatus = async (req, res) => {
         }
 
         await client.query("BEGIN");
+
+        const existingRequestResult = await client.query(
+            `SELECT request_id, listing_id, request_status
+            FROM food_requests
+            WHERE request_id = $1
+            FOR UPDATE`,
+            [id]
+        );
+
+        if (existingRequestResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+
+            return res.status(404).json({
+                message: "Food request not found."
+            });
+        }
+
+        const existingRequest = existingRequestResult.rows[0];
+
+        if (
+            cleanedStatus === "Approved" &&
+            existingRequest.request_status !== "Pending"
+        ) {
+            await client.query("ROLLBACK");
+
+            return res.status(409).json({
+                message: "This request has already been processed and cannot be approved again."
+            });
+        }
 
         const requestResult = await client.query(
             `UPDATE food_requests

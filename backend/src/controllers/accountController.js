@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
+const {isValidRole} = require("../validators/accountValidator");
 
 const createAccount = async (req, res) => {
     try {
@@ -14,7 +15,7 @@ const createAccount = async (req, res) => {
         const normalizedEmail = email.trim().toLowerCase();
         const normalizedRole = role.trim();
 
-        if (!["Donor", "Recipient"].includes(normalizedRole)) {
+        if (!isValidRole(normalizedRole)) {
             return res.status(400).json({
                 message: "Role must be Donor or Recipient."
             });

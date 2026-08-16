@@ -1,12 +1,7 @@
 const pool = require("../config/db");
+const {isValidRequestStatus,
+    mapRequestStatusToListingStatus} = require("../validators/foodRequestValidator");
 
-const allowedRequestStatuses = [
-    "Pending",
-    "Approved",
-    "Rejected",
-    "Cancelled",
-    "Completed"
-];
 
 const createFoodRequest = async (req, res) => {
     try {
@@ -238,7 +233,7 @@ const updateFoodRequestStatus = async (req, res) => {
 
         const cleanedStatus = request_status.trim();
 
-        if (!allowedRequestStatuses.includes(cleanedStatus)) {
+        if (!isValidRequestStatus(cleanedStatus)) {
             return res.status(400).json({
                 message: "Invalid request status."
             });
@@ -294,18 +289,7 @@ const updateFoodRequestStatus = async (req, res) => {
 
         const request = requestResult.rows[0];
 
-        let listingStatus = null;
-
-        if (cleanedStatus === "Approved") {
-            listingStatus = "Reserved";
-        } else if (cleanedStatus === "Completed") {
-            listingStatus = "Collected";
-        } else if (
-            cleanedStatus === "Rejected" ||
-            cleanedStatus === "Cancelled"
-        ) {
-            listingStatus = "Available";
-        }
+        const listingStatus = mapRequestStatusToListingStatus(cleanedStatus);
 
         if (listingStatus) {
             await client.query(

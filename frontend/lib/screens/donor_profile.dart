@@ -1,7 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../services/api_config.dart';
+import 'donor_dashboard.dart';
 
 class CreateDonorProfileScreen extends StatefulWidget {
-  const CreateDonorProfileScreen({super.key});
+  const CreateDonorProfileScreen({
+    super.key,
+  });
 
   @override
   State<CreateDonorProfileScreen> createState() =>
@@ -78,7 +86,6 @@ class _CreateDonorProfileScreenState extends State<CreateDonorProfileScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    // Hide keyboard
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -87,17 +94,101 @@ class _CreateDonorProfileScreenState extends State<CreateDonorProfileScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // Simulate a network request
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$apiBaseUrl/donors'),
+            headers: const {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'full_name': _fullNameController.text.trim(),
+              'email': _emailController.text.trim().toLowerCase(),
+              'phone_number': _phoneController.text.trim(),
+              'street_address': _streetAddressController.text.trim(),
+              'city': _cityController.text.trim(),
+              'postal_code':
+                  _postalCodeController.text.trim().toUpperCase(),
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
 
-    if (!mounted) return;
+      Map<String, dynamic>? responseData;
 
-    setState(() => _isSubmitting = false);
+      if (response.body.isNotEmpty) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          responseData = decoded;
+        }
+      }
 
-    _showSuccessDialog();
+      if (!mounted) return;
+
+      if (response.statusCode == 201) {
+        final rawAccountId = responseData?['account']?['account_id'];
+        final accountId = rawAccountId is int
+            ? rawAccountId
+            : int.tryParse(rawAccountId?.toString() ?? '');
+
+        setState(() => _isSubmitting = false);
+
+        if (accountId == null) {
+          _showErrorMessage(
+            'Your profile was created, but the server did not return an account ID.',
+          );
+          return;
+        }
+
+        _showSuccessDialog(accountId);
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+
+      _showErrorMessage(
+        responseData?['message']?.toString() ??
+            'Unable to create donor profile. Please try again.',
+      );
+    } on FormatException {
+      if (!mounted) return;
+
+      setState(() => _isSubmitting = false);
+      _showErrorMessage('The server returned an invalid response.');
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() => _isSubmitting = false);
+      _showErrorMessage(
+        'Could not connect to the server. Please check your connection and try again.',
+      );
+
+      debugPrint('Create donor profile error: $error');
+    }
   }
 
-  void _showSuccessDialog() {
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  void _showSuccessDialog(int accountId) {
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -155,8 +246,15 @@ class _CreateDonorProfileScreenState extends State<CreateDonorProfileScreen> {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop();
-                      _resetForm();
+                      navigator.pop();
+                      navigator.pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => DonorDashboardScreen(
+                            accountId: accountId,
+                          ),
+                        ),
+                        (route) => false,
+                      );
                     },
                     child: const Text('Done'),
                   ),
@@ -167,16 +265,6 @@ class _CreateDonorProfileScreenState extends State<CreateDonorProfileScreen> {
         );
       },
     );
-  }
-
-  void _resetForm() {
-    _formKey.currentState?.reset();
-    _fullNameController.clear();
-    _emailController.clear();
-    _phoneController.clear();
-    _streetAddressController.clear();
-    _cityController.clear();
-    _postalCodeController.clear();
   }
 
   void _showHelpTip() {

@@ -1,4 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../services/admin_session.dart';
 import 'admin_dashboard.dart';
 
 class AdminLoginScreen extends StatefulWidget {
@@ -43,42 +48,133 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     return null;
   }
 
-  Future<void> _handleLogin() async {
-    FocusScope.of(context).unfocus();
-    setState(() => _errorMessage = null);
+Future<void> _handleLogin() async {
+  FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) {
-      return;
+  setState(() {
+    _errorMessage = null;
+  });
+
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
+
+  setState(() {
+    _isSubmitting = true;
+  });
+
+  try {
+    final response = await http.post(
+      Uri.parse(
+        'https://neighborshare-c2vl.onrender.com/api/accounts/login',
+      ),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': _emailController.text.trim().toLowerCase(),
+        'password': _passwordController.text,
+      }),
+    );
+
+    Map<String, dynamic> responseData = {};
+
+    if (response.body.isNotEmpty) {
+      responseData =
+        jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    setState(() => _isSubmitting = true);
+    if (!mounted) return;
 
-    // TODO: replace with real call once backend/src/routes/admin.js is wired up
-    await Future.delayed(const Duration(seconds: 1));
+    if (response.statusCode == 200) {
+      final account = responseData['account'];
 
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+      if (account is! Map<String, dynamic> ||
+          account['account_id'] == null) {
+        setState(() {
+          _errorMessage =
+              'Administrator account information was not returned by the server.';
+        });
+        return;
+      }
 
-    // Placeholder check — swap for real API call to POST /api/admin/login
-    if (email == 'admin@neighbourshare.com' && password == 'admin123') {
-      if (!mounted) return;
+      final adminAccountId =
+          int.tryParse(account['account_id'].toString());
 
-      setState(() => _isSubmitting = false);
+      if (adminAccountId == null || adminAccountId <= 0) {
+        setState(() {
+          _errorMessage =
+              'Invalid administrator account information.';
+        });
+        return;
+      }
+
+      AdminSession.login(adminAccountId);
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const AdminDashboard(),
+          builder: (_) => const AdminDashboardScreen(),
         ),
       );
+    } else if (response.statusCode == 403) {
+      setState(() {
+        _errorMessage =
+            responseData['message']?.toString() ?? 'Access denied.';
+      });
+
+      _showAccessDeniedDialog();
     } else {
-      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            responseData['message']?.toString() ??
+            'Invalid email or password.';
+      });
+    }
+  } catch (error) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage =
+          'Unable to connect to the server. Please try again.';
+    });
+  } finally {
+    if (mounted) {
       setState(() {
         _isSubmitting = false;
-        _errorMessage = 'Invalid email or password';
       });
     }
   }
+}
+
+void _showAccessDeniedDialog() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        icon: const Icon(
+          Icons.block,
+          color: Colors.redAccent,
+          size: 48,
+        ),
+        title: const Text('Access Denied'),
+        content: const Text(
+          'Only authorized administrators can access the administration panel.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

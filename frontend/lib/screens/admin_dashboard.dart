@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/admin_session.dart';
 import 'reports.dart';
 import 'flagged_listings.dart';
 import 'user_information.dart';
@@ -8,8 +9,12 @@ import 'order_history.dart';
 import 'incident_report.dart';
 import 'admin_login.dart';
 
-class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({super.key});
+/// Placeholder landing screen behind [AdminRouteGuard], standing in until
+/// the full dashboard layout (moderation panel, reports, analytics) is
+/// built out. Exists so role-based access control has a real screen to
+/// protect and can be demonstrated end-to-end.
+class AdminDashboardScreen extends StatelessWidget {
+  const AdminDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -122,11 +127,14 @@ class AdminDashboard extends StatelessWidget {
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text("Logout"),
               onTap: () {
-                Navigator.pushReplacement(
+                AdminSession.logout();
+
+                Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const AdminLoginScreen(),
                   ),
+                  (route) => false,
                 );
               },
             ),

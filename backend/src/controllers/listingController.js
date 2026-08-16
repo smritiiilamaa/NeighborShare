@@ -1,12 +1,8 @@
 const pool = require("../config/db");
 
-const allowedCategories = [
-    "Cooked Meals",
-    "Bakery",
-    "Fruits",
-    "Vegetables",
-    "Other"
-];
+const {isValidCategory,
+    hasRequiredListingFields
+} = require("../validators/listingValidator");
 
 const allowedStatuses = [
     "Available",
@@ -90,21 +86,15 @@ const createListing = async (req, res) => {
             });
         }
 
-        if (
-            !Number.isInteger(accountId) ||
-            accountId <= 0 ||
-            !food_name?.trim() ||
-            !category?.trim() ||
-            !cleanQuantity ||
-            !pickup_location?.trim()
-        ) {
+
+        if (!hasRequiredListingFields(req.body)) {
             return res.status(400).json({
                 message:
                     "Account ID and all required listing fields must be provided."
             });
         }
 
-        if (!allowedCategories.includes(category.trim())) {
+        if (!isValidCategory(category)) {
             return res.status(400).json({
                 message: "Invalid food category."
             });
@@ -369,7 +359,7 @@ const updateListing = async (req, res) => {
             });
         }
 
-        if (!allowedCategories.includes(category.trim())) {
+        if (!isValidCategory(category)) {
             return res.status(400).json({
                 message: "Invalid food category."
             });

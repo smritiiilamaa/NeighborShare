@@ -1,6 +1,6 @@
 const pool = require("../config/db");
 const {isValidRequestStatus,
-    mapRequestStatusToListingStatus} = require("../validators/foodRequestValidator");
+    mapRequestStatusToListingStatus} = require("../validators/requestValidator");
 
 
 const createFoodRequest = async (req, res) => {

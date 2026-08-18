@@ -7,4 +7,4 @@ Frontend URL: https://neighborshare-frontend.onrender.com/
 
 Admin Login:
 Email: admin@neighbourshare.com
-Password: admin123
+Password: Demo2026!
